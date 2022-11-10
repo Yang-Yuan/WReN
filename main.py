@@ -3,6 +3,8 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
+from datetime import datetime as dt
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,8 +17,8 @@ import models
 
 parser = argparse.ArgumentParser(description='baseline')
 parser.add_argument('--model', type=str, default='WReN')
-parser.add_argument('--epochs', type=int, default=200)
-parser.add_argument('--batch_size', type=int, default=32)
+parser.add_argument('--epochs', type=int, default=3)
+parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--seed', type=int, default=12345)
 parser.add_argument('--device', type=int, default=0)
 parser.add_argument('--load_workers', type=int, default=16)
@@ -30,6 +32,7 @@ parser.add_argument('--beta2', type=float, default=0.999)
 parser.add_argument('--epsilon', type=float, default=1e-8)
 parser.add_argument('--meta_beta', type=float, default=10.0)
 parser.add_argument('--tag', type=int, default=1)
+parser.add_argument('--workers', type=int, default=0)
 
 
 args = parser.parse_args()
@@ -38,18 +41,20 @@ torch.cuda.set_device(args.device)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
+timestamp = str(dt.now()).replace(":", "")
+
 if not os.path.exists(args.save):
-    os.makedirs(args.save)
+    os.makedirs(args.save + timestamp)
 if not os.path.exists(args.log):
-    os.makedirs(args.log)
+    os.makedirs(args.log + timestamp)
 
-train = dataset(args.path, "train", args.img_size, transform=transforms.Compose([ToTensor()]))
-valid = dataset(args.path, "val", args.img_size, transform=transforms.Compose([ToTensor()]))
-test = dataset(args.path, "test", args.img_size, transform=transforms.Compose([ToTensor()]))
+train_dataset = dataset(args.path, "train", args.img_size, transform=transforms.Compose([ToTensor()]))
+valid_dataset = dataset(args.path, "val", args.img_size, transform=transforms.Compose([ToTensor()]))
+test_dataset = dataset(args.path, "test", args.img_size, transform=transforms.Compose([ToTensor()]))
 
-trainloader = DataLoader(train, batch_size=args.batch_size, shuffle=True, num_workers=16)
-validloader = DataLoader(valid, batch_size=args.batch_size, shuffle=False, num_workers=16)
-testloader = DataLoader(test, batch_size=args.batch_size, shuffle=False, num_workers=16)
+trainloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
+validloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+testloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
 model = None
 if args.model == 'WReN':
@@ -65,7 +70,7 @@ elif args.model == 'LSTM':
 if args.cuda:
     model = model.cuda()
 
-log = logwrapper(args.log)
+log = logwrapper(args.log + timestamp)
 
 def train(epoch):
     model.train()
@@ -140,6 +145,7 @@ def test(epoch):
     return acc_all/float(counter)
 
 def main():
+
     for epoch in range(0, args.epochs):
         train_loss, train_acc = train(epoch)
         val_loss, val_acc = validate(epoch)
@@ -148,8 +154,8 @@ def main():
         model.save_model(args.save, epoch)
         loss = {'train':train_loss, 'val':val_loss}
         acc = {'train':train_acc, 'val':val_acc, 'test':test_acc}
-        log.write_scalars('Loss', loss, epoch)
-        log.write_scalars('Accuracy', acc, epoch)
+        log.write_scalars('/Loss', loss, epoch)
+        log.write_scalars('/Accuracy', acc, epoch)
 
 if __name__ == '__main__':
     main()

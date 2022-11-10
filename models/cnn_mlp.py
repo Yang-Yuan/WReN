@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-from basic_model import BasicModel
+from models.basic_model import BasicModel
 
 class conv_module(nn.Module):
     def __init__(self):

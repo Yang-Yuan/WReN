@@ -1,2 +1,2 @@
-from dataset_utility import *
-from logging_utility import *
+from utility.dataset_utility import *
+from utility.logging_utility import *

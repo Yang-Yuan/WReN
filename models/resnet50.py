@@ -6,7 +6,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.models as models
 
-from basic_model import BasicModel
+from models.basic_model import BasicModel
 
 class identity(nn.Module):
     def __init__(self):
