@@ -19,11 +19,17 @@ class BasicModel(nn.Module):
 
         meta_target_loss = 0.
         if meta_pred is not None:
-            meta_pred = torch.chunk(meta_pred, chunks=12, dim=1)
-            meta_target = torch.chunk(meta_target, chunks=12, dim=1)
+            # The BCE loss function can handle multi-dimension input
+            # it is actually no difference between batch and feature size dimensions
+            # just give the loss function all the things and it processes it element-wise
+            # the aggregation part might be different to the following method
+            # but as a loss, it is equivalent functionally
+            meta_target_loss = F.binary_cross_entropy(torch.sigmoid(meta_pred), meta_target)
 
-            for idx in range(0, 12):
-                meta_target_loss += F.binary_cross_entropy(F.sigmoid(meta_pred[idx]), meta_target[idx])
+            # meta_pred = torch.chunk(meta_pred, chunks=12, dim=1)
+            # meta_target = torch.chunk(meta_target, chunks=12, dim=1)
+            # for idx in range(0, 12):
+            #     meta_target_loss += F.binary_cross_entropy(torch.sigmoid(meta_pred[idx]), meta_target[idx])
 
         loss = target_loss + self.meta_beta*meta_target_loss / 12.
         return loss

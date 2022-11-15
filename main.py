@@ -62,7 +62,7 @@ if "CNN-MLP" == args.model:
 elif "ResNet" == args.model:
     model = models.Resnet50_MLP(args)
 elif "LSTM" == args.model:
-    model = models.CNN_LSTM(args)
+    model = models.CNN_LSTM_MLP(args)
 elif "WReN" == args.model:
     model = models.WReN(args)
 elif "Wild-ResNet" == args.model:
@@ -154,9 +154,6 @@ def test(epoch):
 
 def main():
 
-    images, _, _ = next(iter(trainloader))
-    log.add_graph(model, images.cuda())
-
     for epoch in range(0, args.epochs):
         train_loss, train_acc = train(epoch)
         val_loss, val_acc = validate(epoch)
@@ -168,6 +165,9 @@ def main():
         log.add_scalars('/Loss', loss, epoch)
         log.add_scalars('/Accuracy', acc, epoch)
         log.close()
+
+    images, _, _ = next(iter(trainloader))
+    log.add_graph(model, images.cuda())
 
 
 if __name__ == '__main__':

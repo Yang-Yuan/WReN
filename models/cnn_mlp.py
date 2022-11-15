@@ -33,8 +33,7 @@ class conv_module(nn.Module):
         x = self.conv4(x)
         x = self.relu4(self.batch_norm4(x))
         return x
-        # return x.view(-1, 32*4*4)
-        # return x.flatten(start_dim = -3)
+
 
 class mlp_module(nn.Module):
     def __init__(self):

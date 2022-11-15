@@ -32,48 +32,69 @@ class conv_module(nn.Module):
         x = self.relu3(self.batch_norm3(x))
         x = self.conv4(x)
         x = self.relu4(self.batch_norm4(x))
-        return x.view(-1, 16, 8*4*4)
+        return x
+
 
 class lstm_module(nn.Module):
     def __init__(self):
         super(lstm_module, self).__init__()
         self.lstm = nn.LSTM(input_size=8*4*4+9, hidden_size=96, num_layers=1)
+
+    def forward(self, x):
+
+        # the input for lstm is, by default, (L, N, H_in)
+        # where L is length of sequence, N is batch size, and H_in is image shape
+        x = x.permute(1, 0, 2)
+
+        # output, (h_n, c_n) = self.lstm(x)
+        # only use the last hidden state
+        _, (h_n, _) = self.lstm(x)
+        return h_n
+
+
+class mlp_module(nn.Module):
+
+    def __init__(self):
+        super(mlp_module, self).__init__()
         self.dropout = nn.Dropout(0.5)
         self.fc = nn.Linear(96, 8)
 
     def forward(self, x):
-        x = x.permute(1, 0, 2)
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
 
-        # output, (h_n, c_n) = self.lstm(x) # only use the last hidden state
-        _, (h_n, _) = self.lstm(x)
-        h_n = h_n.squeeze()
-        score = self.fc(h_n)
-        return score
 
-class CNN_LSTM(BasicModel):
+class CNN_LSTM_MLP(BasicModel):
     def __init__(self, args):
-        super(CNN_LSTM, self).__init__(args)
+        super(CNN_LSTM_MLP, self).__init__(args)
         self.conv = conv_module()
         self.lstm = lstm_module()
-        self.register_buffer("tags", torch.tensor(self.build_tags(), dtype=torch.float))
+        self.mlp = mlp_module()
+        self.batch_size = args.batch_size
+        self.img_size = args.img_size
+        self.tags = self.build_tags()
+        # self.register_buffer("tags", torch.tensor(self.build_tags(), dtype=torch.float))
         self.optimizer = optim.Adam(self.parameters(), lr=args.lr, betas=(args.beta1, args.beta2), eps=args.epsilon)
 
     def build_tags(self):
         tags = np.zeros((16, 9))
         tags[:8, :8] = np.eye(8)
         tags[8:, 8] = 1
+        tags = torch.tensor(tags, dtype = torch.float)
+        tags = tags.unsqueeze(0).expand(self.batch_size, -1, -1)
+        tags = tags.cuda()
         return tags
 
-    def compute_loss(self, output, target, _):
-        pred = output[0]
-        loss = F.cross_entropy(pred, target)
-        return loss
-
     def forward(self, x):
-        batch = x.shape[0]
-        features = self.conv(x.view(-1, 1, 80, 80))
-        features = torch.cat([features, self.tags.unsqueeze(0).expand(batch, -1, -1)], dim=-1)
-        score = self.lstm(features)
-        return score, torch.tensor([404])
+        x = x.view(-1, 1, self.img_size, self.img_size) # entry-wise encoding
+        features = self.conv(x)
+        features = features.flatten(start_dim = -3)
+        features = features.view(self.batch_size, 16, -1)
+        features = torch.cat([features, self.tags], dim=-1)
+        h_n = self.lstm(features)
+        h_n = h_n.squeeze() # the layer number (2 for bi-directional LSTM) is included in the first dimension
+        pred = self.mlp(h_n)
+        return pred
 
     
