@@ -57,20 +57,25 @@ validloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=Fals
 testloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
 model = None
-if args.model == 'WReN':
-    model = models.WReN(args)
-elif args.model == 'CNN_MLP':
+if "CNN-MLP" == args.model:
     model = models.CNN_MLP(args)
-elif args.model == 'Resnet50_MLP':
+elif "ResNet" == args.model:
     model = models.Resnet50_MLP(args)
-elif args.model == 'LSTM':
+elif "LSTM" == args.model:
     model = models.CNN_LSTM(args)
+elif "WReN" == args.model:
+    model = models.WReN(args)
+elif "Wild-ResNet" == args.model:
+    pass
+else:
+    raise ValueError("Unknow Model.")
 
 
 if args.cuda:
     model = model.cuda()
 
 log = logwrapper(args.log + timestamp)
+
 
 def train(epoch):
     model.train()
@@ -95,6 +100,7 @@ def train(epoch):
     if counter > 0:
         print("Avg Training Loss: {:.6f}, Acc: {:.4f}".format(loss_all/float(counter), acc_all/float(counter)))
     return loss_all/float(counter), acc_all/float(counter)
+
 
 def validate(epoch):
     model.eval()
@@ -123,6 +129,7 @@ def validate(epoch):
         print("Total Validation Loss: {:.6f}, Acc: {:.4f}".format(loss_all/float(counter), acc_all/float(counter)))
     return loss_all/float(counter), acc_all/float(counter)
 
+
 def test(epoch):
     model.eval()
     accuracy = 0
@@ -144,7 +151,11 @@ def test(epoch):
         print("Total Testing Acc: {:.4f}".format(acc_all / float(counter)))
     return acc_all/float(counter)
 
+
 def main():
+
+    images, _, _ = next(iter(trainloader))
+    log.add_graph(model, images.cuda())
 
     for epoch in range(0, args.epochs):
         train_loss, train_acc = train(epoch)
@@ -154,8 +165,10 @@ def main():
         model.save_model(args.save, epoch)
         loss = {'train':train_loss, 'val':val_loss}
         acc = {'train':train_acc, 'val':val_acc, 'test':test_acc}
-        log.write_scalars('/Loss', loss, epoch)
-        log.write_scalars('/Accuracy', acc, epoch)
+        log.add_scalars('/Loss', loss, epoch)
+        log.add_scalars('/Accuracy', acc, epoch)
+        log.close()
+
 
 if __name__ == '__main__':
     main()

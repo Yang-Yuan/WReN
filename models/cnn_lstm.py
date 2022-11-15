@@ -43,12 +43,11 @@ class lstm_module(nn.Module):
 
     def forward(self, x):
         x = x.permute(1, 0, 2)
-        # hidden = torch.zeros(1, x.size()[1], 96)
-        # cell = torch.zeros(1, x.size()[1], 96)
-        # print(hidden.size())
-        # print(cell.size())
-        hidden, _ = self.lstm(x)
-        score = self.fc(hidden[-1, :, :])
+
+        # output, (h_n, c_n) = self.lstm(x) # only use the last hidden state
+        _, (h_n, _) = self.lstm(x)
+        h_n = h_n.squeeze()
+        score = self.fc(h_n)
         return score
 
 class CNN_LSTM(BasicModel):
@@ -75,6 +74,6 @@ class CNN_LSTM(BasicModel):
         features = self.conv(x.view(-1, 1, 80, 80))
         features = torch.cat([features, self.tags.unsqueeze(0).expand(batch, -1, -1)], dim=-1)
         score = self.lstm(features)
-        return score, None
+        return score, torch.tensor([404])
 
     

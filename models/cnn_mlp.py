@@ -32,7 +32,9 @@ class conv_module(nn.Module):
         x = self.relu3(self.batch_norm3(x))
         x = self.conv4(x)
         x = self.relu4(self.batch_norm4(x))
-        return x.view(-1, 32*4*4)
+        return x
+        # return x.view(-1, 32*4*4)
+        # return x.flatten(start_dim = -3)
 
 class mlp_module(nn.Module):
     def __init__(self):
@@ -52,17 +54,15 @@ class CNN_MLP(BasicModel):
     def __init__(self, args):
         super(CNN_MLP, self).__init__(args)
         self.conv = conv_module()
+        self.flatten = nn.Flatten(start_dim = -3)
         self.mlp = mlp_module()
         self.optimizer = optim.Adam(self.parameters(), lr=args.lr, betas=(args.beta1, args.beta2), eps=args.epsilon)
 
-    def compute_loss(self, output, target, _):
-        pred = output[0]
-        loss = F.cross_entropy(pred, target)
-        return loss
-
     def forward(self, x):
-        features = self.conv(x.view(-1, 16, 80, 80))
-        score = self.mlp(features)
-        return score, None
+        # features = self.conv(x.view(-1, 16, 80, 80))
+        features = self.conv(x)
+        features = self.flatten(features)
+        pred = self.mlp(features)
+        return pred
 
     

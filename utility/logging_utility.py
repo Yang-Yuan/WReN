@@ -8,16 +8,23 @@ class logwrapper(object):
     def __init__(self, log_path):
         self.writter = SummaryWriter(log_path)
     
-    def write_scalar(self, name, scalar, epoch):
+    def add_scalar(self, name, scalar, epoch):
         self.writter.add_scalar(name, scalar, epoch)
-    
-    def write_scalars(self, name, scalars, epoch):
-        self.writter.add_scalars(name, scalars, epoch)
+        self.writter.flush()
 
-    def write_text(self, title, content):
+    def add_scalars(self, name, scalars, epoch):
+        self.writter.add_scalars(name, scalars, epoch)
+        self.writter.flush()
+
+    def add_text(self, title, content):
         self.writter.add_text(title, content)
-    
-    def close_wrapper(self):
+        self.writter.flush()
+
+    def add_graph(self, model, input_to_model):
+        self.writter.add_graph(model, input_to_model)
+        self.writter.flush()
+
+    def close(self):
         self.writter.close()
 
 

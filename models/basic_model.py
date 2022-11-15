@@ -6,6 +6,7 @@ class BasicModel(nn.Module):
     def __init__(self, args):
         super(BasicModel, self).__init__()
         self.name = args.model
+        self.meta_beta = args.meta_beta
 
     def load_model(self, path, epoch):
         self.state_dict = torch.load(path+'{}_epoch_{}.pth'.format(self.name, epoch))
@@ -13,31 +14,66 @@ class BasicModel(nn.Module):
     def save_model(self, path, epoch):
         torch.save(self.state_dict(), path+'{}_epoch_{}.pth'.format(self.name, epoch))
 
-    def compute_loss(self, output, target, meta_target):
-        pass
+    def compute_loss(self, pred, meta_pred, target, meta_target):
+        target_loss = F.cross_entropy(pred, target)
+
+        meta_target_loss = 0.
+        if meta_pred is not None:
+            meta_pred = torch.chunk(meta_pred, chunks=12, dim=1)
+            meta_target = torch.chunk(meta_target, chunks=12, dim=1)
+
+            for idx in range(0, 12):
+                meta_target_loss += F.binary_cross_entropy(F.sigmoid(meta_pred[idx]), meta_target[idx])
+
+        loss = target_loss + self.meta_beta*meta_target_loss / 12.
+        return loss
 
     def train_(self, input, target, meta_target):
+
         self.optimizer.zero_grad()
         output = self(input)
-        loss = self.compute_loss(output, target, meta_target)
+
+        if isinstance(output, tuple):
+            pred, meta_pred = output
+        else:
+            pred = output
+            meta_pred = None
+
+        loss = self.compute_loss(pred, meta_pred, target, meta_target)
         loss.backward()
         self.optimizer.step()
-        pred = output[0].data.max(1)[1]
+
+        pred = pred.data.max(1)[1]
         correct = pred.eq(target.data).cpu().sum().numpy()
         accuracy = correct * 100. / target.size()[0]
         return loss.item(), accuracy
 
     def validate_(self, input, target, meta_target):
         output = self(input)
-        loss = self.compute_loss(output, target, meta_target)
-        pred = output[0].data.max(1)[1]
+
+        if isinstance(output, tuple):
+            pred, meta_pred = output
+        else:
+            pred = output
+            meta_pred = None
+
+        loss = self.compute_loss(pred, meta_pred, target, meta_target)
+
+        pred = pred.data.max(1)[1]
         correct = pred.eq(target.data).cpu().sum().numpy()
         accuracy = correct * 100. / target.size()[0]
         return loss.item(), accuracy
 
     def test_(self, input, target, meta_target):
         output = self(input)
-        pred = output[0].data.max(1)[1]
+
+        if isinstance(output, tuple):
+            pred, meta_pred = output
+        else:
+            pred = output
+            meta_pred = None
+
+        pred = pred.data.max(1)[1]
         correct = pred.eq(target.data).cpu().sum().numpy()
         accuracy = correct * 100. / target.size()[0]
         return accuracy
