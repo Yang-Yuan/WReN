@@ -21,7 +21,7 @@ parser.add_argument('--epochs', type=int, default=3)
 parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--seed', type=int, default=12345)
 parser.add_argument('--device', type=int, default=0)
-parser.add_argument('--load_workers', type=int, default=16)
+parser.add_argument('--load_workers', type=int, default=4)
 parser.add_argument('--path', type=str, default='./data/')
 parser.add_argument('--save', type=str, default='./results/checkpoint/')
 parser.add_argument('--log', type=str, default='./results/log/')
@@ -66,6 +66,8 @@ elif "LSTM" == args.model:
 elif "WReN" == args.model:
     model = models.WReN(args)
 elif "Wild-ResNet" == args.model:
+    pass
+elif "Context-Blind-ResNet":
     pass
 else:
     raise ValueError("Unknow Model.")
