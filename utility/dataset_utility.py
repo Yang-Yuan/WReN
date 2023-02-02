@@ -1,5 +1,6 @@
 import os
 import glob
+import tarfile
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,7 +48,7 @@ class dataset(Dataset):
             meta_target = meta_target.astype(np.uint8)
         # if meta_structure.dtype == np.int8:
         #     meta_structure = meta_structure.astype(np.uint8)
-    
+
         del data
         if self.transform:
             resize_image = self.transform(resize_image)

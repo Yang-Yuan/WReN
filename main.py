@@ -17,7 +17,7 @@ import models
 
 parser = argparse.ArgumentParser(description='baseline')
 parser.add_argument('--model', type=str, default='WReN')
-parser.add_argument('--epochs', type=int, default=3)
+parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--batch_size', type=int, default=4)
 parser.add_argument('--seed', type=int, default=12345)
 parser.add_argument('--device', type=int, default=0)
